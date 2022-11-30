@@ -1,41 +1,32 @@
-#include <Rcpp.h>
-using namespace Rcpp;
+#include <RcppArmadillo.h>
 
-// [[Rcpp::export]]
-NumericVector CapplyB(NumericVector us, NumericMatrix X, NumericVector mu){
-  int n = us.size();
-  int p = mu.size();
-  int ia, ib;
-  NumericVector CapplyBout(p*p);
+// [[Rcpp::depends(RcppArmadillo)]]
 
-  for(ia = 0; ia < p*p; ia++){
-    for(ib = 0; ib < n; ib++){
-      CapplyBout(ia) += us(ib) * (X(ib,ia/p) - mu(ia/p)) * (X(ib,ia%p) - mu(ia%p));
-    }
-  }
-  return CapplyBout;
-}
-
-// [[Rcpp::export]]
-List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 0.000001) {
-  int nrow = amat.nrow();
+// For use in C++ code. Void output: arguments are altered by pass by reference.
+// arma objects used instead of rcpp::numerics.
+void myfitConGraphC_alt(const arma::mat & amat,
+                        const arma::mat & S,
+                        arma::mat & Shat,
+                        int & iter,
+                        double tol = 0.000001) {
+  int nrow = amat.n_rows;
   int ia, ib, ic, id, sizeA, dummyInt = 0;
-  NumericMatrix W(nrow, nrow), W0(nrow,nrow), W11(nrow-1,nrow-1);
-  NumericVector w12(nrow-1), s12(nrow-1), paj(nrow-1), beta(nrow-1), w(nrow-1);
+  arma::mat W(nrow, nrow), W0(nrow,nrow), W11(nrow-1,nrow-1);
+  arma::vec w12(nrow-1), s12(nrow-1), paj(nrow-1), beta(nrow-1), w(nrow-1);
   bool dummyBool;
   double alpha, dummyDouble, dummyDouble2;
-
+  
   for (ia = 0; ia < nrow; ia++){
     for (ib = 0; ib < nrow; ib++){
       W(ia,ib) = S(ia,ib);
       W0(ia,ib) = S(ia,ib);
     }
   }
-
+  
   int nIterate = 0;
   bool Converge = false;
-
-
+  
+  
   while (Converge == false){
     nIterate += 1;
     for (ia = 0; ia < nrow; ia++){
@@ -76,14 +67,14 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
       for(ib = ia+1; ib < nrow; ib++){
         paj(ib-1) = amat(ia,ib);
       }
-
+      
       //Initialise beta
-
+      
       for(ib = 0; ib < nrow-1; ib++){
         beta(ib) = 0;
       }
-
-
+      
+      
       //Initialise w
       dummyBool = false;
       for(ib = 0; ib < nrow-1; ib++){
@@ -92,7 +83,7 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
           break;
         }
       }
-
+      
       if(dummyBool == false){
         for(ib = 0; ib < nrow-1; ib++){
           w(ib) = 0;
@@ -105,7 +96,7 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
             sizeA +=1;
           }
         }
-        NumericVector indicies(sizeA);
+        arma::vec indicies(sizeA);
         dummyInt = 0;
         for(ib = 0; ib < nrow-1; ib++){
           if(paj(ib) == 1){
@@ -114,24 +105,24 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
             //indicies holds the index values where paj == 1.
           }
         }
-        NumericMatrix A(sizeA, sizeA);
+        arma::mat A(sizeA, sizeA);
         for(ib = 0; ib < sizeA; ib++){
           for(ic = 0; ic < sizeA; ic++){
             A(ib,ic) = W11(indicies(ib),indicies(ic));
             //A is coefficient matrix of system to solve
           }
         }
-        NumericVector b(sizeA);
+        arma::vec b(sizeA);
         for(ib = 0; ib < sizeA; ib++){
           b(ib) = s12(indicies(ib));
           //b is right hand matrix of system to solve
         }
-
+        
         //Gausian elimination. Get A in upper triangular form.
-
+        
         for(ib = 0; ib < sizeA-1; ib++){
           if(A(ib,ib) == 0){
-            stop("Zero found in covariance matrix diagonal.");
+            Rcpp::stop("Zero found in covariance matrix diagonal.");
           }
           for(ic = ib+1; ic < sizeA; ic++){
             alpha = A(ic,ib) / A(ib,ib);
@@ -141,10 +132,10 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
             b(ic) -= alpha*b(ib);
           }
         }
-
+        
         //Back substitution.
         dummyInt = sizeA;
-        NumericVector sol(sizeA);
+        arma::vec sol(sizeA);
         for(ib = sizeA-1; ib >= 0; ib--){
           dummyInt -= 1;
           dummyDouble = b(ib);
@@ -153,12 +144,12 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
           }
           sol(ib) = dummyDouble/A(ib,ib);
         }
-
+        
         //Adjust beta
         for(ib = 0; ib < sizeA; ib++){
           beta(indicies(ib)) = sol(ib);
         }
-
+        
         //Matrix multiply W11 with beta
         for(ib = 0; ib < nrow-1; ib++){
           w(ib) = 0;
@@ -166,7 +157,7 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
             w(ib) += W11(ib,ic)*beta(ic);
           }
         }
-
+        
         for(ib = 0; ib < ia; ib++){
           W(ib,ia) = w(ib);
           W(ia,ib) = w(ib);
@@ -202,7 +193,6 @@ List myfitConGraphC(NumericMatrix amat, NumericMatrix S, double n, double tol = 
       }
     }
   }
-
-  return List::create(Named("Shat") = W,
-                      Named("iter") = nIterate);
+  Shat = W;
+  iter = nIterate;
 }

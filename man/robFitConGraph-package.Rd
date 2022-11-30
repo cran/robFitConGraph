@@ -4,7 +4,23 @@
 \name{robFitConGraph-package}
 \alias{robFitConGraph-package}
 \alias{_PACKAGE}
-\title{A package for robust estimation of scatter matrices subject to zero- constraints in its inverse.}
+\title{Robust estimation of scatter matrices subject to zero-constraints in their inverse.}
 \description{
-robFitConGraph contains one function named after itself: \code{\link[robFitConGraph]{robFitConGraph}}.
+The package contains a function named after itself, \code{\link{robFitConGraph}}, 
+two auxiliary functions \code{\link{find_eta}} and \code{\link{find_sigma1}} and a data set 
+\code{\link{anxieties}}.
+}
+\details{
+The function \code{robFitConGraph} provides two types of robust t-M-estimators of scatter 
+subject to zero-constraints in the inverse. See the \code{robFitConGraph} function documentation 
+for further details.
+
+A tutorial including background information can be found on arxiv.org <doi:10.48550/arXiv.2204.04291>.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://arxiv.org/abs/2204.04291}
+}
+
 }
